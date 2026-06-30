@@ -9,56 +9,54 @@ import { differenceInDays, format } from 'date-fns'
 // ── ID Photo Upload Component ──────────────────────────
 function PhotoUpload({ value, onChange }) {
   const inputRef = useRef()
-  const [preview, setPreview] = useState(null)
 
   const handleFile = (e) => {
-    const file = e.target.files[0]
-    if (!file) return
-    if (!file.type.startsWith('image/')) { toast.error('Please select an image file'); return }
-    if (file.size > 5 * 1024 * 1024)    { toast.error('Image must be under 5MB'); return }
-    setPreview(URL.createObjectURL(file))
-    onChange(file)
+    const selectedFiles = Array.from(e.target.files)
+    if (!selectedFiles.length) return
+    const valid = selectedFiles.filter(f => f.type.startsWith('image/') && f.size <= 5 * 1024 * 1024)
+    if (valid.length !== selectedFiles.length) toast.error('Some files were rejected (must be images under 5MB)')
+    if (!valid.length) return
+    
+    valid.forEach(f => { f.preview = URL.createObjectURL(f) })
+    onChange([...(value || []), ...valid])
+    e.target.value = ''
   }
 
-  const handleRemove = () => {
-    setPreview(null)
-    onChange(null)
-    inputRef.current.value = ''
+  const handleRemove = (idx) => {
+    const next = [...(value || [])]
+    next.splice(idx, 1)
+    onChange(next.length ? next : null)
   }
+
+  const files = value || []
 
   return (
-    <div className="space-y-2">
-      {!preview ? (
-        <div
-          onClick={() => inputRef.current.click()}
-          className="w-full h-28 border-2 border-dashed border-ink-600 rounded-xl
-                     flex flex-col items-center justify-center gap-2 cursor-pointer
-                     hover:border-amber-500/50 hover:bg-amber-500/5 transition-all duration-150"
-        >
-          <span className="text-2xl">📷</span>
-          <p className="text-xs text-gray-400">Click to upload or take photo</p>
-          <p className="text-xs text-gray-600">JPG, PNG · Max 5MB</p>
-        </div>
-      ) : (
-        <div className="relative w-full h-28 rounded-xl overflow-hidden border border-ink-600">
-          <img src={preview} alt="ID Preview" className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-black/40 flex items-center justify-center gap-2 opacity-0 hover:opacity-100 transition-opacity">
-            <button type="button" onClick={() => inputRef.current.click()}
-              className="text-xs bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg transition-all">
-              Change
-            </button>
-            <button type="button" onClick={handleRemove}
-              className="text-xs bg-rose-500/40 hover:bg-rose-500/60 text-white px-3 py-1.5 rounded-lg transition-all">
-              Remove
-            </button>
-          </div>
-          <div className="absolute bottom-2 right-2">
-            <span className="text-xs bg-emerald-500/80 text-white px-2 py-0.5 rounded-full">✓ Ready</span>
-          </div>
+    <div className="space-y-3">
+      {files.length > 0 && (
+        <div className="flex gap-3 overflow-x-auto pb-2">
+          {files.map((file, idx) => (
+            <div key={idx} className="relative w-24 h-24 shrink-0 rounded-xl overflow-hidden border border-ink-600 group">
+              <img src={file.preview} alt={`Preview ${idx + 1}`} className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
+                <button type="button" onClick={() => handleRemove(idx)} className="text-white bg-rose-500/80 px-2 py-1 rounded text-xs hover:bg-rose-500 transition-colors">
+                  Remove
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
-      <input ref={inputRef} type="file" accept="image/*" capture="environment"
-        className="hidden" onChange={handleFile} />
+      <div
+        onClick={() => inputRef.current.click()}
+        className="w-full py-5 border-2 border-dashed border-ink-600 rounded-xl
+                   flex flex-col items-center justify-center gap-2 cursor-pointer
+                   hover:border-amber-500/50 hover:bg-amber-500/5 transition-all duration-150"
+      >
+        <span className="text-2xl">📷</span>
+        <p className="text-xs text-gray-400">Click to upload photo{files.length > 0 ? 's (add more)' : ''}</p>
+        <p className="text-xs text-gray-600">JPG, PNG · Max 5MB</p>
+      </div>
+      <input ref={inputRef} type="file" multiple accept="image/*" capture="environment" className="hidden" onChange={handleFile} />
     </div>
   )
 }
@@ -119,7 +117,7 @@ function ConfirmModal({ data, onConfirm, onCancel }) {
 
         {data.hasPhoto && (
           <p className="text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2">
-            ✓ ID photo will be uploaded
+            ✓ {data.photoCount} ID photo(s) will be uploaded
           </p>
         )}
 
@@ -140,7 +138,7 @@ export default function CheckIn() {
   const [rooms,           setRooms]          = useState([])
   const [occupiedRoomIds, setOccupiedRoomIds] = useState([])
   const [loading,        setLoading]        = useState(false)
-  const [photoFile,      setPhotoFile]      = useState(null)
+  const [photoFiles,      setPhotoFiles]      = useState(null)
   const [returningGuest, setReturningGuest] = useState(null)
   const [showConfirm,    setShowConfirm]    = useState(false)
 
@@ -299,9 +297,14 @@ export default function CheckIn() {
       }
 
       let photoUrl = null
-      if (photoFile) {
-        toast.loading('Uploading ID photo...', { id: 'photo' })
-        photoUrl = await uploadIdPhoto(photoFile, form.mobile.trim())
+      if (photoFiles && photoFiles.length > 0) {
+        toast.loading(`Uploading ${photoFiles.length} ID photo(s)...`, { id: 'photo' })
+        const urls = []
+        for (let i = 0; i < photoFiles.length; i++) {
+          const u = await uploadIdPhoto(photoFiles[i], form.mobile.trim() + (i > 0 ? `-${i}` : ''))
+          urls.push(u)
+        }
+        photoUrl = urls.join(',')
         toast.dismiss('photo')
       }
 
@@ -377,7 +380,8 @@ export default function CheckIn() {
             total,
             paid,
             balance,
-            hasPhoto:   !!photoFile,
+            hasPhoto:   !!(photoFiles && photoFiles.length > 0),
+            photoCount: photoFiles ? photoFiles.length : 0,
           }}
           onConfirm={handleSubmit}
           onCancel={() => setShowConfirm(false)}
@@ -440,7 +444,7 @@ export default function CheckIn() {
             <label className="block text-xs text-gray-400 mb-1.5 font-medium">
               ID Photo <span className="text-gray-600">(optional — ID Document verification)</span>
             </label>
-            <PhotoUpload value={photoFile} onChange={setPhotoFile} />
+            <PhotoUpload value={photoFiles} onChange={setPhotoFiles} />
           </div>
         </section>
 
