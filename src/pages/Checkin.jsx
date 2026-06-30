@@ -595,5 +595,6 @@ export default function CheckIn() {
         </div>
       </form>
     </div>
+    </div>
   )
 }
