@@ -1,3 +1,4 @@
+import GuestDocumentCard from '../components/GuestDocumentCard';
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
@@ -369,7 +370,10 @@ export default function CheckIn() {
         <h1 className="text-xl font-semibold text-white">New Check In</h1>
         <p className="text-sm text-gray-500 mt-0.5">Fill in guest details to assign a room</p>
       </div>
-
+<div className="space-y-4 mt-6">
+      <div className="mb-6">
+        <GuestDocumentCard guest={form} />
+      </div>
       <form onSubmit={handleReview} className="space-y-6">
         {/* Guest Info */}
         <section className="bg-ink-900 border border-ink-700 rounded-xl p-5 space-y-4">
