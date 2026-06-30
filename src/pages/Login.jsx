@@ -1,17 +1,17 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth'
-import { useNavigate } from 'react-router-dom' // Imported for route navigation
+import { useNavigate } from 'react-router-dom'
+import { supabase } from '../lib/supabase' // Import Supabase client directly!
 import toast from 'react-hot-toast'
 
 export default function Login() {
-  const { signIn, user } = useAuth()
+  const { user } = useAuth()
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
 
-  // Redirect automatically if a manager is already logged in
   useEffect(() => {
     if (user) {
       navigate('/')
@@ -23,10 +23,16 @@ export default function Login() {
     setLoading(true)
     
     try {
-      // Execute authentication handshake safely
-      await signIn(email, password)
+      // Call Supabase directly to ensure it never hits an undefined hook function
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
+      
+      if (error) throw error
+
       toast.success('Welcome back!')
-      navigate('/') // Route directly to dashboard matrix
+      navigate('/')
     } catch (error) {
       toast.error(error.message || 'Invalid email or password')
     } finally {
@@ -37,14 +43,12 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-ink-950 flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
-        {/* Header */}
         <div className="mb-8">
           <p className="text-xs font-mono text-amber-500 tracking-widest uppercase mb-2">Hotel PMS</p>
           <h1 className="text-2xl font-semibold text-white">Welcome Back Malhar!</h1>
           <p className="text-sm text-gray-500 mt-1">Sign in to access the dashboard</p>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs text-gray-400 mb-1.5 font-medium">Email</label>
@@ -72,7 +76,6 @@ export default function Login() {
                 type="button"
                 onClick={() => setShowPassword(prev => !prev)}
                 className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-200"
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
                 {showPassword ? (
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
