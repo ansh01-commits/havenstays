@@ -1,22 +1,37 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth'
+import { useNavigate } from 'react-router-dom' // Imported for route navigation
 import toast from 'react-hot-toast'
 
 export default function Login() {
-  const { signIn } = useAuth()
+  const { signIn, user } = useAuth()
+  const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
 
+  // Redirect automatically if a manager is already logged in
+  useEffect(() => {
+    if (user) {
+      navigate('/')
+    }
+  }, [user, navigate])
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
-    const { error } = await signIn(email, password)
-    if (error) {
-      toast.error(error.message)
+    
+    try {
+      // Execute authentication handshake safely
+      await signIn(email, password)
+      toast.success('Welcome back!')
+      navigate('/') // Route directly to dashboard matrix
+    } catch (error) {
+      toast.error(error.message || 'Invalid email or password')
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   return (

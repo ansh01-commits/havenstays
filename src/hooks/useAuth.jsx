@@ -9,13 +9,11 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // 1. Check active sessions on initial mount
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
       setLoading(false)
     })
 
-    // 2. Listen for auth state changes (login, signout, token refreshes)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
       setLoading(false)
@@ -24,17 +22,26 @@ export function AuthProvider({ children }) {
     return () => subscription.unsubscribe()
   }, [])
 
-  // Sign out flow wrapper
-  const signOut = async () => {
-    setLoading(true)
-    await supabase.auth.signOut()
-    setUser(null)
-    setLoading(false)
+  // ── ADD THIS SIGN IN FUNCTION ──────────────────────────────────
+  const signIn = async (email, password) => {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
+    if (error) throw error
+    return data
   }
 
+  const signOut = async () => {
+    await supabase.auth.signOut()
+    setUser(null)
+  }
+
+  // Make sure BOTH functions are passed into the context value!
   const value = {
     user,
     loading,
+    signIn, // Check if your Login.jsx imports 'signIn' or 'login' and match the name
     signOut
   }
 
