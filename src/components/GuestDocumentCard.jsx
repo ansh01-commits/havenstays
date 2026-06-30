@@ -4,16 +4,26 @@ import { useState } from 'react';
 export default function GuestDocumentCard({ guest }) {
   const [isDownloading, setIsDownloading] = useState(false);
 
-  // Assuming your guest object contains: { name: "Malhar", document_path: "ids/malhar_passport.pdf" }
-  const hasDocument = !!guest?.document_path;
+  // The database column is id_photo_url, which might be a comma-separated string
+  const documentPathsStr = guest?.id_photo_url || guest?.document_path;
+  const hasDocument = !!documentPathsStr;
 
   const handleDownload = async () => {
     setIsDownloading(true);
-    // Extracted file extension dynamically
-    const fileExtension = guest.document_path.split('.').pop();
-    const cleanFileName = `${guest.name.replace(/\s+/g, '_')}_Document.${fileExtension}`;
+    try {
+      const paths = documentPathsStr.split(',').map(p => p.trim()).filter(Boolean);
+      
+      for (let i = 0; i < paths.length; i++) {
+        const path = paths[i];
+        const fileExtension = path.split('.').pop() || 'jpg';
+        const suffix = paths.length > 1 ? `_Part${i + 1}` : '';
+        const cleanFileName = `${(guest?.name || 'Guest').replace(/\s+/g, '_')}_Document${suffix}.${fileExtension}`;
 
-    await downloadGuestDocument('client-documents', guest.document_path, cleanFileName);
+        await downloadGuestDocument('id-photos', path, cleanFileName);
+      }
+    } catch (err) {
+      console.error(err);
+    }
     setIsDownloading(false);
   };
 
@@ -22,7 +32,7 @@ export default function GuestDocumentCard({ guest }) {
       <div>
         <h3 className="text-sm font-medium text-white">Client Verification File</h3>
         <p className="text-xs text-gray-500">
-          {hasDocument ? 'Encrypted document attached' : 'No document uploaded'}
+          {hasDocument ? (documentPathsStr.includes(',') ? 'Multiple encrypted documents attached' : 'Encrypted document attached') : 'No document uploaded'}
         </p>
       </div>
 

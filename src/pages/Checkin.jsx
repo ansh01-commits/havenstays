@@ -130,6 +130,12 @@ function ConfirmModal({ data, onConfirm, onCancel }) {
           </p>
         )}
 
+        {data.returningGuest && data.returningGuest.id_photo_url && (
+          <div className="pt-2">
+            <GuestDocumentCard guest={data.returningGuest} />
+          </div>
+        )}
+
         <div className="flex gap-3 pt-1">
           <button onClick={onCancel}  className="btn-ghost flex-1">Go Back</button>
           <button onClick={onConfirm} className="btn-primary flex-1">Confirm</button>
@@ -391,6 +397,7 @@ export default function CheckIn() {
             balance,
             hasPhoto:   !!(photoFiles && photoFiles.length > 0),
             photoCount: photoFiles ? photoFiles.length : 0,
+            returningGuest: returningGuest
           }}
           onConfirm={handleSubmit}
           onCancel={() => setShowConfirm(false)}
@@ -406,9 +413,6 @@ export default function CheckIn() {
         <p className="text-sm text-gray-500 mt-0.5">Fill in guest details to assign a room</p>
       </div>
 <div className="space-y-4 mt-6">
-      <div className="mb-6">
-        <GuestDocumentCard guest={form} />
-      </div>
       <form onSubmit={handleReview} className="space-y-6">
         {/* Guest Info */}
         <section className="bg-ink-900 border border-ink-700 rounded-xl p-5 space-y-4">
