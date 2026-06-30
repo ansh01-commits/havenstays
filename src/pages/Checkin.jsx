@@ -13,11 +13,13 @@ function PhotoUpload({ value, onChange }) {
   const handleFile = (e) => {
     const selectedFiles = Array.from(e.target.files)
     if (!selectedFiles.length) return
-    const valid = selectedFiles.filter(f => f.type.startsWith('image/') && f.size <= 5 * 1024 * 1024)
-    if (valid.length !== selectedFiles.length) toast.error('Some files were rejected (must be images under 5MB)')
+    const valid = selectedFiles.filter(f => (f.type.startsWith('image/') || f.type === 'application/pdf') && f.size <= 5 * 1024 * 1024)
+    if (valid.length !== selectedFiles.length) toast.error('Some files were rejected (must be JPG, PNG, or PDF under 5MB)')
     if (!valid.length) return
     
-    valid.forEach(f => { f.preview = URL.createObjectURL(f) })
+    valid.forEach(f => { 
+      if (f.type.startsWith('image/')) f.preview = URL.createObjectURL(f) 
+    })
     onChange([...(value || []), ...valid])
     e.target.value = ''
   }
@@ -35,9 +37,16 @@ function PhotoUpload({ value, onChange }) {
       {files.length > 0 && (
         <div className="flex gap-3 overflow-x-auto pb-2">
           {files.map((file, idx) => (
-            <div key={idx} className="relative w-24 h-24 shrink-0 rounded-xl overflow-hidden border border-ink-600 group">
-              <img src={file.preview} alt={`Preview ${idx + 1}`} className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
+            <div key={idx} className="relative w-24 h-24 shrink-0 rounded-xl overflow-hidden border border-ink-600 group bg-ink-800 flex flex-col items-center justify-center">
+              {file.type === 'application/pdf' ? (
+                <div className="flex flex-col items-center gap-1 text-rose-400 p-2">
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                  <span className="text-[10px] font-medium uppercase truncate w-full text-center">{file.name}</span>
+                </div>
+              ) : (
+                <img src={file.preview} alt={`Preview ${idx + 1}`} className="absolute inset-0 w-full h-full object-cover" />
+              )}
+              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all z-10">
                 <button type="button" onClick={() => handleRemove(idx)} className="text-white bg-rose-500/80 px-2 py-1 rounded text-xs hover:bg-rose-500 transition-colors">
                   Remove
                 </button>
@@ -52,11 +61,11 @@ function PhotoUpload({ value, onChange }) {
                    flex flex-col items-center justify-center gap-2 cursor-pointer
                    hover:border-amber-500/50 hover:bg-amber-500/5 transition-all duration-150"
       >
-        <span className="text-2xl">📷</span>
-        <p className="text-xs text-gray-400">Click to upload photo{files.length > 0 ? 's (add more)' : ''}</p>
-        <p className="text-xs text-gray-600">JPG, PNG · Max 5MB</p>
+        <span className="text-2xl">📄</span>
+        <p className="text-xs text-gray-400">Click to upload document{files.length > 0 ? 's (add more)' : ''}</p>
+        <p className="text-xs text-gray-600">JPG, PNG, PDF · Max 5MB</p>
       </div>
-      <input ref={inputRef} type="file" multiple accept="image/*" capture="environment" className="hidden" onChange={handleFile} />
+      <input ref={inputRef} type="file" multiple accept="image/*,.pdf" capture="environment" className="hidden" onChange={handleFile} />
     </div>
   )
 }
