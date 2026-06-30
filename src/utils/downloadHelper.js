@@ -9,15 +9,21 @@ import toast from 'react-hot-toast';
  */
 export const downloadGuestDocument = async (bucketName, filePath, downloadName = 'document') => {
   try {
-    // 1. Generate a secure, temporary signed URL valid for 60 seconds
-    const { data, error } = await supabase.storage
-      .from(bucketName)
-      .createSignedUrl(filePath, 60);
+    let downloadUrl = filePath;
 
-    if (error) throw error;
+    if (!filePath.startsWith('http')) {
+      // 1. Generate a secure, temporary signed URL valid for 60 seconds
+      const { data, error } = await supabase.storage
+        .from(bucketName)
+        .createSignedUrl(filePath, 60);
 
-    // 2. Fetch the file data using the signed URL
-    const response = await fetch(data.signedUrl);
+      if (error) throw error;
+      downloadUrl = data.signedUrl;
+    }
+
+    // 2. Fetch the file data using the URL
+    const response = await fetch(downloadUrl);
+    if (!response.ok) throw new Error('Network response was not ok');
     const blob = await response.blob();
 
     // 3. Create a temporary anchor tag in the browser to force the download
