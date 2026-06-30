@@ -1,0 +1,42 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #0A0A0F;
+  color: #E2E2F0;
+  font-family: 'DM Sans', sans-serif;
+  margin: 0;
+}
+
+/* Room status pill */
+.status-free     { @apply bg-emerald-500/15 text-emerald-400 border border-emerald-500/30; }
+.status-occupied { @apply bg-rose-500/15 text-rose-400 border border-rose-500/30; }
+.status-checkout { @apply bg-amber-500/15 text-amber-400 border border-amber-500/30; }
+
+/* Input base style */
+.input-base {
+  @apply w-full bg-ink-800 border border-ink-600 rounded-lg px-4 py-2.5
+         text-sm text-white placeholder-gray-500
+         focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/30
+         transition-all duration-150;
+}
+
+/* Button primary */
+.btn-primary {
+  @apply bg-amber-500 hover:bg-amber-400 text-ink-950 font-semibold
+         px-5 py-2.5 rounded-lg text-sm transition-all duration-150
+         disabled:opacity-40 disabled:cursor-not-allowed;
+}
+
+/* Button ghost */
+.btn-ghost {
+  @apply bg-ink-800 hover:bg-ink-700 text-gray-300 hover:text-white
+         border border-ink-600
+         px-5 py-2.5 rounded-lg text-sm transition-all duration-150;
+}
