@@ -203,8 +203,14 @@ export default function CheckIn() {
     setRooms(roomList)
 
     if (roomId) {
-      const selected = roomList.find(r => r.id === parseInt(roomId))
-      if (selected) setForm(f => ({ ...f, tariff: selected.base_tariff.toString() }))
+      const selected = roomList.find(r => String(r.id) === String(roomId) || String(r.room_no) === String(roomId))
+      if (selected) {
+        setForm(f => ({ 
+          ...f, 
+          room_id: selected.id.toString(),
+          tariff: selected.base_tariff.toString() 
+        }))
+      }
     }
   }
 
@@ -236,8 +242,18 @@ export default function CheckIn() {
   }
 
   const handleRoomChange = (e) => {
-    const selected = rooms.find(r => r.id === parseInt(e.target.value))
-    setForm(f => ({ ...f, room_id: e.target.value, tariff: selected ? selected.base_tariff.toString() : f.tariff }))
+    // Try to find the room either by matching its internal id OR by matching its room number string
+    const selected = rooms.find(r => 
+      r.id === parseInt(e.target.value) || 
+      r.room_no === e.target.value
+    )
+
+    setForm(f => ({ 
+      ...f, 
+      // Securely pass the internal database ID integer, fallback to whatever value was selected
+      room_id: selected ? selected.id.toString() : e.target.value, 
+      tariff: selected ? selected.base_tariff.toString() : f.tariff 
+    }))
   }
 
   const getRoomUnavailableReason = (room) => {
@@ -299,6 +315,13 @@ export default function CheckIn() {
         .select().single()
       if (guestError) throw guestError
 
+      let finalNotes = form.notes || null
+      if (form.rental_type === 'hourly') {
+        finalNotes = finalNotes 
+          ? `[Hourly: ${form.hourly_duration}h] ${finalNotes}` 
+          : `[Hourly: ${form.hourly_duration}h]`
+      }
+
       const bookingPayload = {
         room_id:         targetRoomId,
         guest_id:       guestData.id,
@@ -306,12 +329,11 @@ export default function CheckIn() {
         rental_type:    form.rental_type,
         checkin_date:   form.checkin_date,
         checkout_date:  form.rental_type === 'hourly' ? form.checkin_date : form.checkout_date,
-        ...(form.rental_type === 'hourly' && { hourly_duration: parseInt(form.hourly_duration) }),
-        tariff:         form.rental_type === 'hourly' ? getHourlyRate(hours) : parseFloat(form.tariff),
-        paid_online:    parseFloat(form.paid_online)  || 0,
-        paid_cash:      parseFloat(form.paid_cash)    || 0,
-        paid_agoda:     parseFloat(form.paid_agoda)   || 0,
-        notes:          form.notes || null,
+        tariff:         form.rental_type === 'hourly' ? getHourlyRate(hours) : Math.max(0, parseFloat(form.tariff) || 0),
+        paid_online:    Math.max(0, parseFloat(form.paid_online) || 0),
+        paid_cash:      Math.max(0, parseFloat(form.paid_cash) || 0),
+        paid_agoda:     Math.max(0, parseFloat(form.paid_agoda) || 0),
+        notes:          finalNotes,
         status:         'active',
       }
 
@@ -503,7 +525,7 @@ export default function CheckIn() {
             {form.rental_type === 'daily' && (
               <div>
                 <label className="block text-xs text-gray-400 mb-1.5 font-medium">Tariff (per day) *</label>
-                <input type="number" className="input-base" placeholder="1200" value={form.tariff} onChange={set('tariff')} required />
+                <input type="number" min="0" className="input-base" placeholder="1200" value={form.tariff} onChange={set('tariff')} required />
               </div>
             )}
           </div>
@@ -515,15 +537,15 @@ export default function CheckIn() {
           <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="block text-xs text-gray-400 mb-1.5 font-medium">Online</label>
-              <input type="number" className="input-base" placeholder="0" value={form.paid_online} onChange={set('paid_online')} />
+              <input type="number" min="0" className="input-base" placeholder="0" value={form.paid_online} onChange={set('paid_online')} />
             </div>
             <div>
               <label className="block text-xs text-gray-400 mb-1.5 font-medium">Cash</label>
-              <input type="number" className="input-base" placeholder="0" value={form.paid_cash} onChange={set('paid_cash')} />
+              <input type="number" min="0" className="input-base" placeholder="0" value={form.paid_cash} onChange={set('paid_cash')} />
             </div>
             <div>
               <label className="block text-xs text-gray-400 mb-1.5 font-medium">Agoda</label>
-              <input type="number" className="input-base" placeholder="0" value={form.paid_agoda} onChange={set('paid_agoda')} />
+              <input type="number" min="0" className="input-base" placeholder="0" value={form.paid_agoda} onChange={set('paid_agoda')} />
             </div>
           </div>
 

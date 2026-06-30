@@ -81,8 +81,8 @@ function RoomCard({ room, booking, onCheckout, onStatusChange }) {
   }, [menuOpen])
 
   let effectiveStatus = room.status
-  if (booking && booking.checkout_date === today && room.status === 'occupied') {
-    effectiveStatus = 'checkout_today'
+  if (booking) {
+    effectiveStatus = booking.checkout_date === today ? 'checkout_today' : 'occupied'
   }
 
   const cfg = STATUS_CONFIG[effectiveStatus] || STATUS_CONFIG.available
@@ -104,7 +104,7 @@ function RoomCard({ room, booking, onCheckout, onStatusChange }) {
           <span className={`text-xs px-2.5 py-1 rounded-full font-medium border ${cfg.badge}`}>
             {cfg.label}
           </span>
-          {!['occupied', 'checkout_today'].includes(effectiveStatus) && (
+          {!booking && (
             <div className="relative" ref={menuRef}>
               <button
                 onClick={e => { e.stopPropagation(); setMenuOpen(v => !v) }}
@@ -128,7 +128,7 @@ function RoomCard({ room, booking, onCheckout, onStatusChange }) {
 
       <p className="text-xs text-gray-500 capitalize">{room.type} · {getFloorLabel(room.floor)}</p>
 
-      {booking && ['occupied', 'checkout_today'].includes(effectiveStatus) && (
+      {booking && (
         <div className="border-t border-ink-700 pt-3 space-y-1.5">
           <p className="text-sm font-medium text-white truncate">{booking.guest_name}</p>
           <p className="text-xs text-gray-400 font-mono">{booking.mobile}</p>
@@ -235,11 +235,18 @@ export default function Dashboard() {
     const today = format(new Date(), 'yyyy-MM-dd')
     const bookingList = Object.values(currentBookingsMap)
     
+    let occupied = 0, available = 0, cleaning = 0, outOfService = 0
+    roomList.forEach(r => {
+      let st = r.status
+      if (currentBookingsMap[r.room_no]) st = 'occupied'
+      if (st === 'occupied') occupied++
+      else if (st === 'available') available++
+      else if (st === 'cleaning') cleaning++
+      else if (st === 'out_of_service') outOfService++
+    })
+
     setStats({
-      occupied:     roomList.filter(r => r.status === 'occupied').length,
-      available:    roomList.filter(r => r.status === 'available').length,
-      cleaning:     roomList.filter(r => r.status === 'cleaning').length,
-      outOfService: roomList.filter(r => r.status === 'out_of_service').length,
+      occupied, available, cleaning, outOfService,
       checkoutToday: bookingList.filter(b => b.checkout_date === today).length,
       balanceDue:    bookingList.filter(b => b.balance > 0).length,
     })
